@@ -12,21 +12,18 @@
 
 //Constants
 
-#define wipeB D12     // Button pin for WipeMode
+#define wipeB A0     // Button pin for WipeMode
 #define redLed D14    // Set Led Pins
-#define greenLed D10 
-#define blueLed D2 
+#define greenLed D2 
+#define blueLed D10
+ 
 #define RST_PIN         D3         // Configurable, see typical pin layout above
 #define SS_PIN          D8        // Configurable, see typical pin layout above
 #define COMMON_ANODE
 
-#ifdef COMMON_ANODE
-#define LED_ON LOW
-#define LED_OFF HIGH
-#else
+ 
 #define LED_ON HIGH
-#define LED_OFF LOW
-#endif
+#define LED_OFF LOW 
 
 
 //Global variables
@@ -40,33 +37,16 @@ uint8_t successRead;       // Variable integer to keep if we have Successful Rea
 byte storedCard[4];        // Stores an ID read from EEPROM
 byte readCard[4];          // Stores scanned ID read from RFID Module
 byte masterCard[4];        // Stores master card's ID read from EEPROM 
-unsigned long uid;
 bool isDoorOpen = false;
 int httpMode = 0;
 
 
- 
-
-unsigned long getID(){
-  if ( ! mfrc522.PICC_ReadCardSerial()) { //Since a PICC placed get Serial and continue
-    return -1;
-  }
-  unsigned long hex_num;
-  hex_num =  mfrc522.uid.uidByte[0] << 24;
-  hex_num += mfrc522.uid.uidByte[1] << 16;
-  hex_num += mfrc522.uid.uidByte[2] <<  8;
-  hex_num += mfrc522.uid.uidByte[3];
-  mfrc522.PICC_HaltA(); // Stop reading
-  return hex_num;
-}
- 
-
-void setup() {
- 
+void setup() { 
   pinMode(redLed, OUTPUT);
   pinMode(greenLed, OUTPUT);
   pinMode(blueLed, OUTPUT);
-  digitalWrite(redLed, LED_ON);  // Make sure led is off
+  pinMode(wipeB, INPUT);   // Enable pin's pull up resistor
+  digitalWrite(redLed, LED_OFF);  // Make sure led is off
   digitalWrite(greenLed, LED_OFF);  // Make sure led is off
   digitalWrite(blueLed, LED_OFF); // Make sure led is off
 
@@ -79,13 +59,13 @@ void setup() {
  Serial.println(String("Tamanho: "+ EEPROM.length()));
   // START WIPING
   //Wipe Code - If the Button (wipeB) Pressed while setup run (powered on) it wipes EEPROM
-  if (false&&digitalRead(wipeB) == LOW) {                              // when button pressed pin should get low, button connected to ground
+  if (analogRead(wipeB) >= 1000) {                              // when button pressed pin should get low, button connected to ground
     digitalWrite(redLed, LED_ON);                               // Red Led stays on to inform user we are going to wipe
     Serial.println(F("Wipe Button Pressed"));
     Serial.println(F("You have 10 seconds to Cancel"));
     Serial.println(F("This will be remove all records and cannot be undone"));
     bool buttonState = monitorWipeButton(6000);                 // Give user enough time to cancel operation
-    if (buttonState == true && digitalRead(wipeB) == LOW) {     // If button still be pressed, wipe EEPROM
+    if (buttonState == true && analogRead(wipeB) >= 1000) {     // If button still be pressed, wipe EEPROM
       Serial.println(F("Starting Wiping EEPROM"));
       for (uint16_t x = 0; x < EEPROM.length(); x = x + 1) {    //Loop end of EEPROM address
         if (EEPROM.read(x) == 0) {                              //If EEPROM address 0
@@ -95,6 +75,7 @@ void setup() {
         else {
           EEPROM.write(x, 0);                                   // if not write 0 to clear, it takes 3.3mS
         }
+        EEPROM.commit();  
       }
       Serial.println(F("EEPROM Successfully Wiped"));
       digitalWrite(redLed, LED_OFF);  // visualize a successful wipe
@@ -123,7 +104,7 @@ void setup() {
       Serial.println(F("No Master Card Defined"));
       Serial.println(F("Scan A PICC to Define as Master Card"));
       do {
-        successRead = getID2();            // sets successRead to 1 when we get read from reader otherwise 0
+        successRead = getID();            // sets successRead to 1 when we get read from reader otherwise 0
         digitalWrite(blueLed, LED_ON);    // Visualize Master Card need to be defined
         delay(200);
         digitalWrite(blueLed, LED_OFF);
@@ -157,14 +138,13 @@ void setup() {
   Serial.println();
 
   for (uint8_t t = 4; t > 0; t--) {
-    Serial.printf("[SETUP] WAIT %d...\n", t);
-    Serial.printf("port d3 %d, port d15 %d\n", D3,D15);
+    Serial.printf("[SETUP] WAIT %d...\n", t); 
     Serial.flush();
     delay(1000);
   }
 
   WiFi.mode(WIFI_STA);
-  WiFiMulti.addAP("D0N1", "abcdef1234");
+  WiFiMulti.addAP("donadel", "123456789");
 
   // Inicia o Servidor no qual iremos ver no navegador e poder acionar o Relé
   server.begin();
@@ -185,9 +165,9 @@ void loop() {
       renderServer(httpMode); 
     
     
-    successRead = getID2();  // sets successRead to 1 when we get read from reader otherwise 0
+    successRead = getID();  // sets successRead to 1 when we get read from reader otherwise 0
     // When device is in use if wipe button pressed for 10 seconds initialize Master Card wiping
-   if (false && digitalRead(wipeB) == LOW) { // Check if button is pressed
+   if (analogRead(wipeB) >= 1000) { // Check if button is pressed
       // Visualize normal operation is iterrupted by pressing wipe button Red is like more Warning to user
       digitalWrite(redLed, LED_ON);  // Make sure led is off
       digitalWrite(greenLed, LED_OFF);  // Make sure led is off
@@ -196,8 +176,9 @@ void loop() {
       Serial.println(F("Wipe Button Pressed"));
       Serial.println(F("Master Card will be Erased! in 10 seconds"));
       bool buttonState = monitorWipeButton(10000); // Give user enough time to cancel operation
-      if (buttonState == true && digitalRead(wipeB) == LOW) {    // If button still be pressed, wipe EEPROM
+      if (buttonState == true && analogRead(wipeB) >= 1000) {    // If button still be pressed, wipe EEPROM
         EEPROM.write(1, 0);                  // Reset Magic Number.
+        EEPROM.commit();  
         Serial.println(F("Master Card Erased from device"));
         Serial.println(F("Please reset to re-program Master Card"));
         while (1);
@@ -259,27 +240,6 @@ void loop() {
     
     renderServer(httpMode);
   }
-
-  /*// Look for new cards
-    if (mfrc522.PICC_IsNewCardPresent()) { 
-      uid = getID();
-      if(uid != -1){
-        Serial.print("Card detected, UID: "); Serial.println(uid); 
-        
-         //Gira o motor no sentido anti-horario a 120 graus
-      if(isDoorOpen){
-        servo.write(0);
-        }
-       else{
-        servo.write(180);
-        }
-
-        isDoorOpen = !isDoorOpen;
- 
-        Serial.print((String)"Door is Open "+isDoorOpen);
-      } 
-    }
- */
       
 }
 
@@ -309,10 +269,7 @@ void renderServer(int type){
       client.print("<p style='color:gree;'>Novo cartao adicionado</p>");
     }else if(type == 4){
       client.print("<p style='color:red;'>Acesso negado</p>");
-    }
-    client.print("<p>");
-    client.print(uid);
-    client.print("</p>");
+    } 
     client.print("</body>");
      
   }  
@@ -329,10 +286,10 @@ void changeDoorStatus(){
 
 /////////////////////////////////////////  Access Granted    ///////////////////////////////////
 void granted () {
+  changeDoorStatus();             // unlock door 
   digitalWrite(blueLed, LED_OFF);   // Turn off blue LED
   digitalWrite(redLed, LED_OFF);  // Turn off red LED
   digitalWrite(greenLed, LED_ON);   // Turn on green LED
-  changeDoorStatus();             // unlock door 
   httpMode = 0;
   delay(1000);            // Hold green LED on for a second
 }
@@ -348,7 +305,7 @@ void denied() {
 
 
 ///////////////////////////////////////// Get PICC's UID ///////////////////////////////////
-uint8_t getID2() { 
+uint8_t getID() { 
 
   // Getting ready for Reading PICCs
   delay(0);
@@ -496,15 +453,15 @@ void successWrite() {
   digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is on
-  delay(200);
+  delay(200); 
   digitalWrite(greenLed, LED_ON);   // Make sure green LED is on
-  delay(200);
+  delay(200); 
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
   delay(200);
   digitalWrite(greenLed, LED_ON);   // Make sure green LED is on
-  delay(200);
+  delay(200); 
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
-  delay(200);
+  delay(200); 
   digitalWrite(greenLed, LED_ON);   // Make sure green LED is on
   delay(200);
 }
@@ -535,15 +492,15 @@ void successDelete() {
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
   delay(200);
-  digitalWrite(blueLed, LED_ON);  // Make sure blue LED is on
+  digitalWrite(redLed, LED_ON);  // Make sure blue LED is on
   delay(200);
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(redLed, LED_OFF);   // Make sure blue LED is off
   delay(200);
-  digitalWrite(blueLed, LED_ON);  // Make sure blue LED is on
+  digitalWrite(redLed, LED_ON);  // Make sure blue LED is on
   delay(200);
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(redLed, LED_OFF);   // Make sure blue LED is off
   delay(200);
-  digitalWrite(blueLed, LED_ON);  // Make sure blue LED is on
+  digitalWrite(redLed, LED_ON);  // Make sure blue LED is on
   delay(200);
 }
 
@@ -558,9 +515,10 @@ bool monitorWipeButton(uint32_t interval) {
   while ((uint32_t)millis() - now < interval)  {
     // check on every half a second
     if (((uint32_t)millis() % 500) == 0) {
-      if (digitalRead(wipeB) != LOW)
+      if (analogRead(wipeB) < 1000)
         return false;
     }
+    yield(); 
   }
   return true;
 }
