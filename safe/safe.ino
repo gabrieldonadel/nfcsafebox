@@ -15,13 +15,9 @@
 #define wipeB A0     // Button pin for WipeMode
 #define redLed D14    // Set Led Pins
 #define greenLed D2 
-#define blueLed D10
- 
+#define yellowLed D10
 #define RST_PIN         D3         // Configurable, see typical pin layout above
-#define SS_PIN          D8        // Configurable, see typical pin layout above
-#define COMMON_ANODE
-
- 
+#define SS_PIN          D8        // Configurable, see typical pin layout above  
 #define LED_ON HIGH
 #define LED_OFF LOW 
 
@@ -44,11 +40,11 @@ int httpMode = 0;
 void setup() { 
   pinMode(redLed, OUTPUT);
   pinMode(greenLed, OUTPUT);
-  pinMode(blueLed, OUTPUT);
+  pinMode(yellowLed, OUTPUT);
   pinMode(wipeB, INPUT);   // Enable pin's pull up resistor
   digitalWrite(redLed, LED_OFF);  // Make sure led is off
   digitalWrite(greenLed, LED_OFF);  // Make sure led is off
-  digitalWrite(blueLed, LED_OFF); // Make sure led is off
+  digitalWrite(yellowLed, LED_OFF); // Make sure led is off
 
   Serial.begin(115200); 
   EEPROM.begin(2048);
@@ -56,7 +52,6 @@ void setup() {
   mfrc522.PCD_Init();   // Init MFRC522
   mfrc522.PCD_DumpVersionToSerial();  // Show details of PCD - MFRC522 Card Reader details
 
- Serial.println(String("Tamanho: "+ EEPROM.length()));
   // START WIPING
   //Wipe Code - If the Button (wipeB) Pressed while setup run (powered on) it wipes EEPROM
   if (analogRead(wipeB) >= 1000) {                              // when button pressed pin should get low, button connected to ground
@@ -105,9 +100,9 @@ void setup() {
       Serial.println(F("Scan A PICC to Define as Master Card"));
       do {
         successRead = getID();            // sets successRead to 1 when we get read from reader otherwise 0
-        digitalWrite(blueLed, LED_ON);    // Visualize Master Card need to be defined
+        digitalWrite(yellowLed, LED_ON);    // Visualize Master Card need to be defined
         delay(200);
-        digitalWrite(blueLed, LED_OFF);
+        digitalWrite(yellowLed, LED_OFF);
         delay(200);
       }
       while (!successRead);                  // Program will not go further while you not get a successful read
@@ -148,7 +143,7 @@ void setup() {
 
   // Inicia o Servidor no qual iremos ver no navegador e poder acionar o Relé
   server.begin();
-  Serial.println("Servidor Iniciado");
+  Serial.println("Servver Started");
  
   // Retorna o Valor do IP que estará nosso servidor na Rede.
   Serial.print("Usar essa URL : ");
@@ -171,7 +166,7 @@ void loop() {
       // Visualize normal operation is iterrupted by pressing wipe button Red is like more Warning to user
       digitalWrite(redLed, LED_ON);  // Make sure led is off
       digitalWrite(greenLed, LED_OFF);  // Make sure led is off
-      digitalWrite(blueLed, LED_OFF); // Make sure led is off
+      digitalWrite(yellowLed, LED_OFF); // Make sure led is off
       // Give some feedback
       Serial.println(F("Wipe Button Pressed"));
       Serial.println(F("Master Card will be Erased! in 10 seconds"));
@@ -230,7 +225,7 @@ void loop() {
     else {
       if ( findID(readCard) ) { // If not, see if the card is in the EEPROM
         Serial.println(F("Welcome, You shall pass"));
-        granted();         // Open the door lock for 300 ms
+        granted();         // Open the door 
       }
       else {      // If not, show that the ID was not valid
         Serial.println(F("You shall not pass"));
@@ -251,7 +246,7 @@ void renderServer(int type){
     }
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: text/html");
-    client.println(""); // Deixei em branco para quem adivinhar o que faz aqui. Não afeta o código, mas gera algo interessante (:
+    client.println("");
     client.println("<!DOCTYPE HTML>");
     client.println("<html>"); 
     client.println("<head><title>Cofre NFC</title><meta http-equiv='refresh' content='2'></head>");
@@ -287,7 +282,7 @@ void changeDoorStatus(){
 /////////////////////////////////////////  Access Granted    ///////////////////////////////////
 void granted () {
   changeDoorStatus();             // unlock door 
-  digitalWrite(blueLed, LED_OFF);   // Turn off blue LED
+  digitalWrite(yellowLed, LED_OFF);   // Turn off blue LED
   digitalWrite(redLed, LED_OFF);  // Turn off red LED
   digitalWrite(greenLed, LED_ON);   // Turn on green LED
   httpMode = 0;
@@ -297,7 +292,7 @@ void granted () {
 ///////////////////////////////////////// Access Denied  ///////////////////////////////////
 void denied() {
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(yellowLed, LED_OFF);   // Make sure blue LED is off
   digitalWrite(redLed, LED_ON);   // Turn on red LED
   httpMode = 4;
   delay(1000);
@@ -332,21 +327,21 @@ uint8_t getID() {
 void cycleLeds() {
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_ON);   // Make sure green LED is on
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(yellowLed, LED_OFF);   // Make sure blue LED is off
   delay(200);
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
-  digitalWrite(blueLed, LED_ON);  // Make sure blue LED is on
+  digitalWrite(yellowLed, LED_ON);  // Make sure blue LED is on
   delay(200);
   digitalWrite(redLed, LED_ON);   // Make sure red LED is on
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(yellowLed, LED_OFF);   // Make sure blue LED is off
   delay(200);
 }
 
 //////////////////////////////////////// Normal Mode Led  ///////////////////////////////////
 void normalModeOn () {
-  digitalWrite(blueLed, LED_ON);  // Blue LED ON and ready to read card
+  digitalWrite(yellowLed, LED_ON);  // Blue LED ON and ready to read card
   digitalWrite(redLed, LED_OFF);  // Make sure Red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure Green LED is off
  
@@ -450,7 +445,7 @@ bool findID( byte find[] ) {
 ///////////////////////////////////////// Write Success to EEPROM   ///////////////////////////////////
 // Flashes the green LED 3 times to indicate a successful write to EEPROM
 void successWrite() {
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(yellowLed, LED_OFF);   // Make sure blue LED is off
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is on
   delay(200); 
@@ -469,7 +464,7 @@ void successWrite() {
 ///////////////////////////////////////// Write Failed to EEPROM   ///////////////////////////////////
 // Flashes the red LED 3 times to indicate a failed write to EEPROM
 void failedWrite() {
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(yellowLed, LED_OFF);   // Make sure blue LED is off
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
   delay(200);
@@ -488,7 +483,7 @@ void failedWrite() {
 ///////////////////////////////////////// Success Remove UID From EEPROM  ///////////////////////////////////
 // Flashes the blue LED 3 times to indicate a success delete to EEPROM
 void successDelete() {
-  digitalWrite(blueLed, LED_OFF);   // Make sure blue LED is off
+  digitalWrite(yellowLed, LED_OFF);   // Make sure blue LED is off
   digitalWrite(redLed, LED_OFF);  // Make sure red LED is off
   digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
   delay(200);
