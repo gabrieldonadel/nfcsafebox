@@ -35,6 +35,7 @@ byte readCard[4];          // Stores scanned ID read from RFID Module
 byte masterCard[4];        // Stores master card's ID read from EEPROM 
 bool isDoorOpen = false;
 int httpMode = 0;
+char data[50];
 
 
 void setup() { 
@@ -139,7 +140,7 @@ void setup() {
   }
 
   WiFi.mode(WIFI_STA);
-  WiFiMulti.addAP("donadel", "123456789");
+  WiFiMulti.addAP("D0N1", "abcdef1234");
 
   // Inicia o Servidor no qual iremos ver no navegador e poder acionar o Relé
   server.begin();
@@ -225,6 +226,7 @@ void loop() {
     else {
       if ( findID(readCard) ) { // If not, see if the card is in the EEPROM
         Serial.println(F("Welcome, You shall pass"));
+        sendPostRequest();
         granted();         // Open the door 
       }
       else {      // If not, show that the ID was not valid
@@ -268,6 +270,23 @@ void renderServer(int type){
     client.print("</body>");
      
   }  
+}
+
+void sendPostRequest(){
+  if ((WiFiMulti.run() == WL_CONNECTED)) {
+    HTTPClient http;    //Declare object of class HTTPClient
+
+    http.begin("http://api-dso2.herokuapp.com/log");      //Specify request destination
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded", false, true);
+     
+    printf("%02X%02X%02X%02X", readCard[0], readCard[1], readCard[2], readCard[3]);
+    sprintf(data, "card_uid=%02X%02X%02X%02X&door_status=%s",readCard[0], readCard[1], readCard[2], readCard[3], isDoorOpen?"open":"closed");
+    int httpCode = http.POST(data); //Send the request
+
+    Serial.println(httpCode);   //Print HTTP return code
+    http.writeToStream(&Serial);  // Print the response body
+  }
+  
 }
 
 void changeDoorStatus(){
