@@ -226,8 +226,8 @@ void loop() {
     else {
       if ( findID(readCard) ) { // If not, see if the card is in the EEPROM
         Serial.println(F("Welcome, You shall pass"));
-        sendPostRequest();
         granted();         // Open the door 
+        sendPostRequest();
       }
       else {      // If not, show that the ID was not valid
         Serial.println(F("You shall not pass"));
